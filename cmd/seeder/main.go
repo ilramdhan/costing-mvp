@@ -68,6 +68,12 @@ func main() {
 	}
 	metrics.MasterDataTime = time.Since(phaseStart)
 
+	// Phase 1.5: Price Rates
+	log.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	if err := seedPriceRates(ctx, pool); err != nil {
+		log.Fatalf("Failed to seed price rates: %v", err)
+	}
+
 	// Phase 2: Routing Data
 	log.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 	phaseStart = time.Now()
@@ -182,6 +188,53 @@ func seedMasterData(ctx context.Context, pool *pgxpool.Pool) error {
 	}
 
 	log.Printf("Created %d parameter groups and %d master parameters", len(groups), len(parameterNames))
+	return nil
+}
+
+func seedPriceRates(ctx context.Context, pool *pgxpool.Pool) error {
+	log.Println("Seeding price rates...")
+
+	// Sample price rates for common parameters
+	priceRates := map[string]float64{
+		"raw_material":     50.0,
+		"electricity_kwh":  1.5,
+		"labor_hours":      25.0,
+		"machine_hours":    15.0,
+		"water_liters":     0.02,
+		"steam_hours":      10.0,
+		"chemical_kg":      80.0,
+		"dye_kg":           100.0,
+		"spindle_hours":    15.0,
+		"loom_hours":       20.0,
+		"finishing_hours":  12.0,
+		"packaging_units":  5.0,
+		"waste_percentage": 0.05,
+		"quality_factor":   1.0,
+		"efficiency_rate":  0.95,
+		"overhead_rate":    0.1,
+		"input_cost":       1000.0,
+		"output_cost":      1200.0,
+		"material_price":   50.0,
+		"labor_rate":       25.0,
+	}
+
+	effectiveDate := time.Now().Format("2006-01-02")
+	count := 0
+
+	for paramKey, rateValue := range priceRates {
+		_, err := pool.Exec(ctx, `
+			INSERT INTO price_rates (id, parameter_key, rate_value, effective_date, notes, created_at)
+			VALUES ($1, $2, $3, $4, $5, NOW())
+			ON CONFLICT (parameter_key, effective_date) DO UPDATE SET rate_value = EXCLUDED.rate_value
+		`, uuid.New(), paramKey, rateValue, effectiveDate, "Monthly rate")
+		if err != nil {
+			// Skip if parameter_key doesn't exist (foreign key constraint)
+			continue
+		}
+		count++
+	}
+
+	log.Printf("Created %d price rates", count)
 	return nil
 }
 

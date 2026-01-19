@@ -41,6 +41,10 @@ type YarnVariantRepository interface {
 	ListByMasterID(ctx context.Context, masterID uuid.UUID, limit, offset int) ([]*entity.YarnVariant, error)
 	// ListIDs retrieves variant IDs with pagination (for batch processing)
 	ListIDs(ctx context.Context, limit, offset int) ([]uuid.UUID, error)
+	// ListWithRouting retrieves variants with their routing IDs (optimized for batch calc)
+	ListWithRouting(ctx context.Context, limit, offset int) ([]*entity.YarnVariant, error)
+	// ListUniqueRoutingIDs retrieves all unique routing template IDs
+	ListUniqueRoutingIDs(ctx context.Context) ([]uuid.UUID, error)
 	// Count returns the total count of variants
 	Count(ctx context.Context) (int64, error)
 	// CountByMasterID returns the count of variants for a master

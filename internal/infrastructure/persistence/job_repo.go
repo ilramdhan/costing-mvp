@@ -118,7 +118,7 @@ func NewProcessStepRepository(pool *pgxpool.Pool) repository.ProcessStepReposito
 
 func (r *processStepRepo) GetByRoutingID(ctx context.Context, routingID uuid.UUID) ([]*entity.ProcessStep, error) {
 	query := `
-		SELECT id, routing_template_id, process_master_id, sequence_order, formula_expression, description, created_at
+		SELECT id, routing_template_id, process_master_id, sequence_order, formula_expression, COALESCE(description, ''), created_at
 		FROM process_steps WHERE routing_template_id = $1 ORDER BY sequence_order
 	`
 	rows, err := r.pool.Query(ctx, query, routingID)
@@ -140,7 +140,7 @@ func (r *processStepRepo) GetByRoutingID(ctx context.Context, routingID uuid.UUI
 
 func (r *processStepRepo) GetByID(ctx context.Context, id uuid.UUID) (*entity.ProcessStep, error) {
 	query := `
-		SELECT id, routing_template_id, process_master_id, sequence_order, formula_expression, description, created_at
+		SELECT id, routing_template_id, process_master_id, sequence_order, formula_expression, COALESCE(description, ''), created_at
 		FROM process_steps WHERE id = $1
 	`
 	var s entity.ProcessStep

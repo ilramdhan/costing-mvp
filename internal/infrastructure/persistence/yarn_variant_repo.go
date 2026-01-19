@@ -130,6 +130,46 @@ func (r *yarnVariantRepo) ListIDs(ctx context.Context, limit, offset int) ([]uui
 	return ids, nil
 }
 
+// ListWithRouting retrieves variants with routing IDs (optimized - only fetches id and routing_template_id)
+func (r *yarnVariantRepo) ListWithRouting(ctx context.Context, limit, offset int) ([]*entity.YarnVariant, error) {
+	query := `SELECT id, routing_template_id FROM yarn_variants WHERE is_active = true ORDER BY id LIMIT $1 OFFSET $2`
+	rows, err := r.pool.Query(ctx, query, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	variants := make([]*entity.YarnVariant, 0, limit)
+	for rows.Next() {
+		var v entity.YarnVariant
+		if err := rows.Scan(&v.ID, &v.RoutingTemplateID); err != nil {
+			return nil, err
+		}
+		variants = append(variants, &v)
+	}
+	return variants, nil
+}
+
+// ListUniqueRoutingIDs retrieves all unique routing template IDs (for caching)
+func (r *yarnVariantRepo) ListUniqueRoutingIDs(ctx context.Context) ([]uuid.UUID, error) {
+	query := `SELECT DISTINCT routing_template_id FROM yarn_variants WHERE routing_template_id IS NOT NULL`
+	rows, err := r.pool.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var ids []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, nil
+}
+
 func (r *yarnVariantRepo) Count(ctx context.Context) (int64, error) {
 	var count int64
 	err := r.pool.QueryRow(ctx, "SELECT COUNT(*) FROM yarn_variants").Scan(&count)
